@@ -1,0 +1,23 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.pdb
+*.tlog
+*.log
+*.sdf
+*.opensdf
+*.ilk
+*.idb
+
+
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
