@@ -63,243 +63,273 @@
 #include <windows.h>
 #include <initguid.h>
 
+//com接口都必须有GUID,
 // %%GUIDs: ------------------------------------------------------------------
 DEFINE_GUID(CLSID_SimpleObject, 0x5e9ddec7, 0x5767, 0x11cf, 0xbe, 0xab, 0x0, 0xaa, 0x0, 0x6c, 0x36, 0x6);
 
-// %%Globals: ----------------------------------------------------------------
-HANDLE          hevtDone;
 
-// %%Classes: ----------------------------------------------------------------
-// simple class-factory: only knows how to create CSimpleObject instances
-class CClassFactory : public IClassFactory {
-  public:
-    // IUnknown
-    STDMETHODIMP    QueryInterface (REFIID riid, void** ppv);
-    STDMETHODIMP_(ULONG) AddRef(void)  { return 1; };
-    STDMETHODIMP_(ULONG) Release(void) { return 1; }
+//
+// 下面是各接口的IID
+//
+// {32bb8320-b41b-11cf-a6bb-0080c7b2d682}
+static const IID IID_IX = 
+{0x32bb8320, 0xb41b, 0x11cf,
+{0xa6, 0xbb, 0x0, 0x80, 0xc7, 0xb2, 0xd6, 0x82}};
 
-    // IClassFactory
-    STDMETHODIMP    CreateInstance (LPUNKNOWN punkOuter, REFIID iid, void **ppv);
-    STDMETHODIMP    LockServer (BOOL fLock) { return E_FAIL; };
-    };
+// 接口定义
+interface IX : IUnknown
+{
+	virtual void __stdcall Fx() = 0;
+};
 
-// simple object supporting a dummy IStream
-class CSimpleObject : public IStream {
-  public:
-    // IUnknown
-    STDMETHODIMP    QueryInterface (REFIID iid, void **ppv);
-    STDMETHODIMP_(ULONG) AddRef(void)  { return InterlockedIncrement(&m_cRef); };
-    STDMETHODIMP_(ULONG) Release(void) { if (InterlockedDecrement(&m_cRef) == 0) { delete this; return 0; } return 1; }
-
-    // IStream
-    STDMETHODIMP    Read(void *pv, ULONG cb, ULONG *pcbRead);
-    STDMETHODIMP    Write(VOID const *pv, ULONG cb, ULONG *pcbWritten);
-    STDMETHODIMP    Seek(LARGE_INTEGER dbMove, DWORD dwOrigin, ULARGE_INTEGER *pbNewPosition)
-        { return E_FAIL; }
-    STDMETHODIMP    SetSize(ULARGE_INTEGER cbNewSize)
-        { return E_FAIL; }
-    STDMETHODIMP    CopyTo(IStream *pstm, ULARGE_INTEGER cb, ULARGE_INTEGER *pcbRead, ULARGE_INTEGER *pcbWritten)
-        { return E_FAIL; }
-    STDMETHODIMP    Commit(DWORD grfCommitFlags)
-        { return E_FAIL; }
-    STDMETHODIMP    Revert(void)
-        { return E_FAIL; }
-    STDMETHODIMP    LockRegion(ULARGE_INTEGER bOffset, ULARGE_INTEGER cb, DWORD dwLockType)
-        { return E_FAIL; }
-    STDMETHODIMP    UnlockRegion(ULARGE_INTEGER bOffset, ULARGE_INTEGER cb, DWORD dwLockType)
-        { return E_FAIL; }
-    STDMETHODIMP    Stat(STATSTG *pstatstg, DWORD grfStatFlag)
-        { return E_FAIL; }
-    STDMETHODIMP    Clone(IStream **ppstm)
-        { return E_FAIL; }
-
-    // constructors/destructors
-    CSimpleObject()     { m_cRef = 1; }
-    ~CSimpleObject()    { SetEvent(hevtDone); }
-
-  private:
-    LONG        m_cRef;
-    };
-
-// %%Globals: ----------------------------------------------------------------
-CClassFactory   g_ClassFactory;
 
 // ---------------------------------------------------------------------------
 // %%Function: Message
 // 
 //  Formats and displays a message to the console.
 // ---------------------------------------------------------------------------
- void
-Message(LPTSTR szPrefix, HRESULT hr)
+void
+	Message(LPTSTR szPrefix, HRESULT hr)
 {
-    LPTSTR   szMessage;
+	LPTSTR   szMessage;
 
-    if (hr == S_OK)
-        {
-        wprintf(szPrefix);
-        wprintf(TEXT("\n"));
-        return;
-        }
- 
-    if (HRESULT_FACILITY(hr) == FACILITY_WINDOWS)
-        hr = HRESULT_CODE(hr);
+	if (hr == S_OK)
+	{
+		wprintf(szPrefix);
+		wprintf(TEXT("\n"));
+		return;
+	}
 
-    FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        hr,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), //The user default language
-        (LPTSTR)&szMessage,
-        0,
-        NULL );
+	if (HRESULT_FACILITY(hr) == FACILITY_WINDOWS)
+		hr = HRESULT_CODE(hr);
 
-    wprintf(TEXT("%s: %s(%lx)\n"), szPrefix, szMessage, hr);
-    
-    LocalFree(szMessage);
+	FormatMessage(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		hr,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), //The user default language
+		(LPTSTR)&szMessage,
+		0,
+		NULL );
+
+	wprintf(TEXT("%s: %s(%lx)\n"), szPrefix, szMessage, hr);
+
+	LocalFree(szMessage);
 }  // Message
+
+
+// %%Globals: ----------------------------------------------------------------
+HANDLE          hevtDone;
+
+// %%Classes: ----------------------------------------------------------------
+// simple class-factory: only knows how to create CSimpleObject instances，核心方法CreateInstance，返回CSimpleObject对象
+class CClassFactory : public IClassFactory {
+public:
+	// IUnknown
+	STDMETHODIMP    QueryInterface (REFIID riid, void** ppv);
+	STDMETHODIMP_(ULONG) AddRef(void)  { return 1; };
+	STDMETHODIMP_(ULONG) Release(void) { return 1; }
+
+	// IClassFactory
+	STDMETHODIMP    CreateInstance (LPUNKNOWN punkOuter, REFIID iid, void **ppv);
+	STDMETHODIMP    LockServer (BOOL fLock) { return E_FAIL; };
+};
+
+// simple object supporting a dummy IStream
+class CSimpleObject : public IStream ,public IX
+{
+public:
+	// IUnknown
+	STDMETHODIMP    QueryInterface (REFIID iid, void **ppv);
+	STDMETHODIMP_(ULONG) AddRef(void)  { return InterlockedIncrement(&m_cRef); };
+	STDMETHODIMP_(ULONG) Release(void) { if (InterlockedDecrement(&m_cRef) == 0) { delete this; return 0; } return 1; }
+
+	//实现接口
+	virtual void __stdcall Fx() { Message(TEXT("调用自定义接口IX，的方法Fx"),S_OK);}
+
+	// IStream
+	STDMETHODIMP    Read(void *pv, ULONG cb, ULONG *pcbRead);
+	STDMETHODIMP    Write(VOID const *pv, ULONG cb, ULONG *pcbWritten);
+	STDMETHODIMP    Seek(LARGE_INTEGER dbMove, DWORD dwOrigin, ULARGE_INTEGER *pbNewPosition)
+	{ return E_FAIL; }
+	STDMETHODIMP    SetSize(ULARGE_INTEGER cbNewSize)
+	{ return E_FAIL; }
+	STDMETHODIMP    CopyTo(IStream *pstm, ULARGE_INTEGER cb, ULARGE_INTEGER *pcbRead, ULARGE_INTEGER *pcbWritten)
+	{ return E_FAIL; }
+	STDMETHODIMP    Commit(DWORD grfCommitFlags)
+	{ return E_FAIL; }
+	STDMETHODIMP    Revert(void)
+	{ return E_FAIL; }
+	STDMETHODIMP    LockRegion(ULARGE_INTEGER bOffset, ULARGE_INTEGER cb, DWORD dwLockType)
+	{ return E_FAIL; }
+	STDMETHODIMP    UnlockRegion(ULARGE_INTEGER bOffset, ULARGE_INTEGER cb, DWORD dwLockType)
+	{ return E_FAIL; }
+	STDMETHODIMP    Stat(STATSTG *pstatstg, DWORD grfStatFlag)
+	{ return E_FAIL; }
+	STDMETHODIMP    Clone(IStream **ppstm)
+	{ return E_FAIL; }
+
+	// constructors/destructors
+	CSimpleObject()     { m_cRef = 1; }
+	~CSimpleObject()    { SetEvent(hevtDone); }
+
+private:
+	LONG        m_cRef;
+};
+
+// %%Globals: ----------------------------------------------------------------
+CClassFactory   g_ClassFactory;
+
 
 // ---------------------------------------------------------------------------
 // %%Function: CSimpleObject::QueryInterface
 // ---------------------------------------------------------------------------
- STDMETHODIMP
-CSimpleObject::QueryInterface(REFIID riid, void** ppv)
+STDMETHODIMP
+	CSimpleObject::QueryInterface(REFIID riid, void** ppv)
 {
-    if (ppv == NULL)
-        return E_INVALIDARG;
-    if (riid == IID_IUnknown || riid == IID_IStream)
-        {
-        *ppv = (IUnknown *) this;
-        AddRef();
-        return S_OK;
-        }
-    *ppv = NULL;
-    return E_NOINTERFACE;
+	if (ppv == NULL)
+		return E_INVALIDARG; 
+	if(riid==IID_IX){
+		*ppv = static_cast<IX*>(this);
+
+		AddRef();
+		return S_OK;
+	}
+	else if (riid == IID_IUnknown || riid == IID_IStream)
+	{
+		*ppv = static_cast<IStream*>(this);
+		AddRef();
+		return S_OK;
+	}
+
+	*ppv = NULL;
+	return E_NOINTERFACE;
 }  // CSimpleObject::QueryInterface
 
 // ---------------------------------------------------------------------------
 // %%Function: CSimpleObject::Read
 // ---------------------------------------------------------------------------
- STDMETHODIMP
-CSimpleObject::Read(void *pv, ULONG cb, ULONG *pcbRead)
+STDMETHODIMP
+	CSimpleObject::Read(void *pv, ULONG cb, ULONG *pcbRead)
 {
-    Message(TEXT("Server: IStream:Read"), S_OK);
-    if (!pv && cb != 0)
-        return E_INVALIDARG;
+	Message(TEXT("Server: IStream:Read"), S_OK);
+	if (!pv && cb != 0)
+		return E_INVALIDARG;
 
-    // fill the buffer with FF's. we could read it from somewhere.
-    if (cb != 0)
-        memset(pv, 0xFF, cb);
+	// fill the buffer with FF's. we could read it from somewhere.
+	if (cb != 0)
+		memset(pv, 0xFF, cb);
 
-    if (pcbRead)
-        *pcbRead = cb;
-    return S_OK;
+	if (pcbRead)
+		*pcbRead = cb;
+	return S_OK;
 }  // CSimpleObject::Read
 
 // ---------------------------------------------------------------------------
 // %%Function: CSimpleObject::Write
 // ---------------------------------------------------------------------------
- STDMETHODIMP
-CSimpleObject::Write(VOID const *pv, ULONG cb, ULONG *pcbWritten)
+STDMETHODIMP
+	CSimpleObject::Write(VOID const *pv, ULONG cb, ULONG *pcbWritten)
 {
-    Message(TEXT("Server: IStream:Write"), S_OK);
-    if (!pv && cb != 0)
-        return E_INVALIDARG;
-    // ignore the data, but we could examine it or put it somewhere
-    if (pcbWritten)
-        *pcbWritten = cb;
-    return S_OK;
+	Message(TEXT("Server: IStream:Write"), S_OK);
+	if (!pv && cb != 0)
+		return E_INVALIDARG;
+	// ignore the data, but we could examine it or put it somewhere
+	if (pcbWritten)
+		*pcbWritten = cb;
+	return S_OK;
 }  // CSimpleObject::Write
 
 // ---------------------------------------------------------------------------
 // %%Function: CClassFactory::QueryInterface
 // ---------------------------------------------------------------------------
- STDMETHODIMP
-CClassFactory::QueryInterface(REFIID riid, void** ppv)
+STDMETHODIMP
+	CClassFactory::QueryInterface(REFIID riid, void** ppv)
 {
-    if (ppv == NULL)
-        return E_INVALIDARG;
-    if (riid == IID_IClassFactory || riid == IID_IUnknown)
-        {
-        *ppv = (IClassFactory *) this;
-        AddRef();
-        return S_OK;
-        }
-    *ppv = NULL;
-    return E_NOINTERFACE;
+	if (ppv == NULL)
+		return E_INVALIDARG;
+	if (riid == IID_IClassFactory || riid == IID_IUnknown)
+	{
+		*ppv = (IClassFactory *) this;
+		AddRef();
+		return S_OK;
+	}
+	*ppv = NULL;
+	return E_NOINTERFACE;
 }  // CClassFactory::QueryInterface
 
 // ---------------------------------------------------------------------------
 // %%Function: CClassFactory::CreateInstance
 // ---------------------------------------------------------------------------
- STDMETHODIMP
-CClassFactory::CreateInstance(LPUNKNOWN punkOuter, REFIID riid, void** ppv)
+STDMETHODIMP
+	CClassFactory::CreateInstance(LPUNKNOWN punkOuter, REFIID riid, void** ppv)
 {
-    LPUNKNOWN   punk;
-    HRESULT     hr;
+	CSimpleObject*   punk;
+	HRESULT     hr;
 
-    *ppv = NULL;
+	*ppv = NULL;
 
-    if (punkOuter != NULL)
-        return CLASS_E_NOAGGREGATION;
+	if (punkOuter != NULL)
+		return CLASS_E_NOAGGREGATION;
 
-    Message(TEXT("Server: IClassFactory:CreateInstance"), S_OK);
+	Message(TEXT("Server: IClassFactory:CreateInstance"), S_OK);
 
-    punk = new CSimpleObject;
+	punk = new CSimpleObject;
 
-    if (punk == NULL)
-        return E_OUTOFMEMORY;
+	if (punk == NULL)
+		return E_OUTOFMEMORY;
 
-    hr = punk->QueryInterface(riid, ppv);
-    punk->Release();
-    return hr;
+	hr = punk->QueryInterface(riid, ppv);
+	punk->Release();
+	return hr;
 }  // CClassFactory::CreateInstance
 
 // ---------------------------------------------------------------------------
 // %%Function: main
 // ---------------------------------------------------------------------------
- void __cdecl
-main()
+void __cdecl
+	main()
 {
-    HRESULT hr;
-    DWORD   dwRegister;
+	HRESULT hr;
+	DWORD   dwRegister;
 
-    // create the thread which is signaled when the instance is deleted
-    hevtDone = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (hevtDone == NULL)
-        {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Message(TEXT("Server: CreateEvent"), hr);
-        exit(hr);
-        }
+	// create the thread which is signaled when the instance is deleted
+	hevtDone = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (hevtDone == NULL)
+	{
+		hr = HRESULT_FROM_WIN32(GetLastError());
+		Message(TEXT("Server: CreateEvent"), hr);
+		exit(hr);
+	}
 
-    // initialize COM for free-threading
-    hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (FAILED(hr))
-        {
-        Message(TEXT("Server: CoInitializeEx"), hr);
-        exit(hr);
-        }
+	// initialize COM for free-threading
+	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	if (FAILED(hr))
+	{
+		Message(TEXT("Server: CoInitializeEx"), hr);
+		exit(hr);
+	}
 
-    // register the class-object with OLE
-    hr = CoRegisterClassObject(CLSID_SimpleObject, &g_ClassFactory,
-        CLSCTX_SERVER, REGCLS_SINGLEUSE, &dwRegister);
-    if (FAILED(hr))
-        {
-        Message(TEXT("Server: CoRegisterClassObject"), hr);
-        exit(hr);
-        }
+	// register the class-object with OLE
+	hr = CoRegisterClassObject(CLSID_SimpleObject, &g_ClassFactory,
+		CLSCTX_SERVER, REGCLS_SINGLEUSE, &dwRegister);
+	if (FAILED(hr))
+	{
+		Message(TEXT("Server: CoRegisterClassObject"), hr);
+		exit(hr);
+	}
 
-    Message(TEXT("Server: Waiting"), S_OK);
+	Message(TEXT("Server: Waiting"), S_OK);
 
-    // wait until an object is created and deleted.
-    WaitForSingleObject(hevtDone, INFINITE);
+	// wait until an object is created and deleted.
+	WaitForSingleObject(hevtDone, INFINITE);//避免使用while，在semple对象析构函数中 设置信号SetEvent(hevtDone)
 
-    CloseHandle(hevtDone);
+	CloseHandle(hevtDone);
 
-    CoUninitialize();
-    Message(TEXT("Server: Done"), S_OK);
+	CoUninitialize();
+	Message(TEXT("Server: Done"), S_OK);
 }  // main
 
 // EOF =======================================================================

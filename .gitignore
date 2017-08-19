@@ -11,6 +11,9 @@
 *.ilk
 *.idb
 
+bin
+Backup
+
 
 
 # Compiled Dynamic libraries
