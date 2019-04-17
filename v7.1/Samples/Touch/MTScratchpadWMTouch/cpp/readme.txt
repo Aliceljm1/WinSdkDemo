@@ -1,3 +1,4 @@
+测试提交
 Multi-touch Scratchpad Application (WM_TOUCH/C++)
 =================================================
 Demonstrates how to enable and handle multi-touch window messages in a Win32 application.
