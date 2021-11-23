@@ -11,3 +11,6 @@ dvd播放示例
 
 ## DshowPlayer
 音视频播放器示例
+
+## Touch
+触摸相关demo，包括手势识别，多指触控，包含多指触控写画：MTScratchpadWMTouch
