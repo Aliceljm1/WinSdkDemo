@@ -31,7 +31,7 @@
 // Windows header files
 #include <windows.h>
 #include <windowsx.h>
-
+#include  <stdio.h>
 // C RunTime header files
 #include <stdlib.h>
 #include <malloc.h>
@@ -51,6 +51,22 @@ WCHAR g_wszTitle[MAX_LOADSTRING];               // The title bar text
 WCHAR g_wszWindowClass[MAX_LOADSTRING];         // The main window class name
 CStrokeCollection g_StrkColFinished;            // Finished strokes, the finger has been lifted
 CStrokeCollection g_StrkColDrawing;             // Strokes that are currently being drawn
+
+
+static inline void dprintf(const char* format, ...)
+{
+    va_list vlArgs = NULL;
+
+    va_start(vlArgs, format);
+    size_t nLen = _vscprintf(format, vlArgs) + 1;
+    char* strBuffer = new char[nLen];
+    _vsnprintf_s(strBuffer, nLen, nLen, format, vlArgs);
+    va_end(vlArgs);
+
+    OutputDebugStringA(strBuffer);
+
+    delete[] strBuffer;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing and WM_TOUCH helpers
@@ -130,7 +146,7 @@ void OnTouchDownHandler(HWND hWnd, const TOUCHINPUT& ti)
     // Extract contact info: point of contact and ID
     POINT pt = GetTouchPoint(hWnd, ti);
     int iCursorId = GetTouchContactID(ti);
-
+    dprintf("x=%d,y=%d,id=%d,down\n",pt.x,pt.y, iCursorId);
     // We have just started a new stroke, which must have an ID value unique
     // among all the strokes currently being drawn. Check if there is a stroke
     // with the same ID in the collection of the strokes in drawing.
@@ -155,7 +171,7 @@ void OnTouchMoveHandler(HWND hWnd, const TOUCHINPUT& ti)
 {
     // Extract contact info: contact ID
     int iCursorId = GetTouchContactID(ti);
-
+    
     // Find the stroke in the collection of the strokes in drawing.
     int iStrk = g_StrkColDrawing.FindStrokeById(iCursorId);
     ASSERT((iStrk >= 0) && (iStrk < g_StrkColDrawing.Count()));
@@ -163,7 +179,7 @@ void OnTouchMoveHandler(HWND hWnd, const TOUCHINPUT& ti)
     // Extract contact info: contact point
     POINT pt;
     pt = GetTouchPoint(hWnd, ti);
-
+    dprintf("x=%d,y=%d,id=%d,move\n", pt.x, pt.y, iCursorId);
     // Add contact point to the stroke
     g_StrkColDrawing[iStrk]->Add(pt);
 
@@ -182,7 +198,9 @@ void OnTouchUpHandler(HWND hWnd, const TOUCHINPUT& ti)
 {
     // Extract contact info: contact ID
     int iCursorId = GetTouchContactID(ti);
-
+    POINT pt;
+    pt = GetTouchPoint(hWnd, ti);
+    dprintf("x=%d,y=%d,id=%d,up  \n", pt.x, pt.y, iCursorId);
     // Find the stroke in the collection of the strokes in drawing.
     int iStrk = g_StrkColDrawing.FindStrokeById(iCursorId);
     ASSERT((iStrk >= 0) && (iStrk < g_StrkColDrawing.Count()));
